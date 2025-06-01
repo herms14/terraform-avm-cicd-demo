@@ -1,0 +1,30 @@
+name: Terraform AVM CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  terraform:
+    name: Terraform Pipeline
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+
+      - name: 🧪 Init
+        run: terraform init -input=false
+
+      - name: ✅ Validate
+        run: terraform validate
+
+      - name: 🧹 Format Check
+        run: terraform fmt -check -recursive
