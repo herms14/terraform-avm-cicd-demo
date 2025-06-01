@@ -1,0 +1,11 @@
+version: "0.17.0"
+output:
+  file: README.md
+  mode: inject
+  template: |
+    {{ .Header }}
+    {{ .Inputs }}
+    {{ .Outputs }}
+    {{ .Providers }}
+    {{ .Requirements }}
+    {{ .Resources }}

@@ -5,7 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  workflow_dispatch:  # ✅ This allows manual trigger from GitHub UI
+  workflow_dispatch:
+
+env:
+  TERRAFORM_VERSION: 1.9.0
+  GO_VERSION: 1.22
+  TERRAFORM_DOCS_VERSION: v0.17.0
 
 jobs:
   terraform:
@@ -19,13 +24,43 @@ jobs:
       - name: ⚙️ Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-           terraform_version: "~> 1.9"
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      - name: 🧪 Init
+      - name: 🔐 Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: 🧪 Terraform Init
         run: terraform init -input=false
 
-      - name: ✅ Validate
+      - name: ✅ Terraform Validate
         run: terraform validate
 
-      - name: 🧹 Format Check
+      - name: 🧹 Terraform Format Check
         run: terraform fmt -check -recursive
+
+      - name: 🔍 Terraform Plan
+        run: terraform plan -out=tfplan.binary
+
+      - name: 🚀 Terraform Apply
+        if: github.event_name == 'workflow_dispatch'
+        run: terraform apply -auto-approve tfplan.binary
+
+      - name: 🛠 Setup Go for Terratest
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: 🧪 Run Terratest
+        run: |
+          cd terratest
+          go test -v -timeout 20m
+
+      - name: 📘 Generate terraform-docs
+        uses: terraform-docs/gh-actions@v1.1.0
+        with:
+          config-file: .terraform-docs.yml
+          output-file: README.md
+          output-method: inject
+          working-dir: .
