@@ -13,8 +13,8 @@ env:
   TERRAFORM_DOCS_VERSION: v0.17.0
 
 jobs:
-  terraform:
-    name: Terraform Pipeline
+  check:
+    name: ✅ Terraform Check (fmt, validate, plan)
     runs-on: ubuntu-latest
 
     steps:
@@ -43,24 +43,67 @@ jobs:
       - name: 🔍 Terraform Plan
         run: terraform plan -out=tfplan.binary
 
-      - name: 🚀 Terraform Apply
-        if: github.event_name == 'workflow_dispatch'
-        run: terraform apply -auto-approve tfplan.binary
+  terratest:
+    name: 🧪 Run Terratest
+    runs-on: ubuntu-latest
+    needs: check
 
-      - name: 🛠 Setup Go for Terratest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🧰 Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: 🧪 Run Terratest
+      - name: 🧪 Run Go tests
         run: |
           cd terratest
           go test -v -timeout 20m
 
-      - name: 📘 Generate terraform-docs
+  terraform_docs:
+    name: 📘 Generate Terraform Docs
+    runs-on: ubuntu-latest
+    needs: check
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📘 Run terraform-docs
         uses: terraform-docs/gh-actions@v1.1.0
         with:
           config-file: .terraform-docs.yml
           output-file: README.md
           output-method: inject
           working-dir: .
+
+  apply:
+    name: 🚀 Terraform Apply
+    runs-on: ubuntu-latest
+    needs:
+      - check
+      - terratest
+      - terraform_docs
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: 🔐 Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: 🚀 Terraform Init
+        run: terraform init -input=false
+
+      - name: 🚀 Terraform Apply
+        run: terraform apply -auto-approve tfplan.binary
