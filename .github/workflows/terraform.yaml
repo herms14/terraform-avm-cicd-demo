@@ -43,6 +43,12 @@ jobs:
       - name: 🔍 Terraform Plan
         run: terraform plan -out=tfplan.binary
 
+      - name: 📦 Upload Plan File
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: tfplan.binary
+
   terratest:
     name: 🧪 Run Terratest
     runs-on: ubuntu-latest
@@ -118,6 +124,11 @@ jobs:
 
       - name: 🚀 Terraform Init
         run: terraform init -input=false
+
+      - name: 📥 Download Plan Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
 
       - name: 🚀 Terraform Apply
         run: terraform apply -auto-approve tfplan.binary
