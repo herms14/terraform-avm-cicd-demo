@@ -17,7 +17,6 @@ sections:
     - resources
     - inputs
     - outputs
-    - examples
     - header
     - footer
     - dependencies
