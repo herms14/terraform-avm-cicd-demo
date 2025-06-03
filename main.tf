@@ -12,12 +12,12 @@ resource "azurerm_resource_group" "this" {
   for_each = var.region_map
   location = each.key
   name     = "${var.prefix}-rg-${each.value}"
-  tags ={
-    managedBy: "Terraform"
-    CostCenter: "12345"
-    Environment: "Production"
-    Owner: "Hermes Miraflor"
-    Project: "Multi-Region VNet Peering"
+  tags = {
+    managedBy  = "Terraform"
+    CostCenter = "12345"
+    Environment = "Production"
+    Owner = "Hermes Miraflor"
+    Project = "Multi-Region VNet Peering"
   }
 }
 
@@ -36,12 +36,12 @@ module "vnet" {
     enforcement = "AllowUnencrypted"
   }
 
-   tags ={
-    managedBy: "Terraform"
-    CostCenter: "12345"
-    Environment: "Production"
-    Owner: "Hermes Miraflor"
-    Project: "Multi-Region VNet Peering"
+  tags = {
+    managedBy  = "Terraform"
+    CostCenter = "12345"
+    Environment = "Production"
+    Owner = "Hermes Miraflor"
+    Project = "Multi-Region VNet Peering"
   }
 
   # Optional: handle peerings only if needed (you'd need dynamic logic here)
