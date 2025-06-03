@@ -62,8 +62,8 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Run Go tests
-        run: |
-          go test -v -timeout 20m ./terratest
+        run: go test -v -timeout 20m .
+        working-directory: terratest
   terraform_docs:
     name: Generate Terraform Docs [Prod]
     runs-on: ubuntu-latest
