@@ -1,1 +1,40 @@
+# Terraform
 .terraform/
+*.tfstate
+*.tfstate.backup
+terraform.tfstate.d/
+crash.log
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.lock.hcl
+
+# Local .terraformrc and credentials
+.terraformrc
+terraform.rc
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+*.tmp
+.DS_Store
+
+# Test and build artifacts
+*.log
+*.out
+*.zip
+*.tar.gz
+
+# Ignore installer files
+terraform_*.zip
+terraform-docs*.tar.gz
+
+# Ignore Go build/test files
+*.test
+coverage.out
