@@ -26,11 +26,11 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Terraform Init
+        run: terraform init -input=false
       - name: Select/Create Terraform Workspace (Prod)
         run: |
           terraform workspace select prod || terraform workspace new prod
-      - name: Terraform Init
-        run: terraform init -input=false
       - name: Terraform Validate
         run: terraform validate
       - name: Terraform Format Check
@@ -100,11 +100,11 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Terraform Init
+        run: terraform init -input=false
       - name: Select/Create Terraform Workspace (Prod)
         run: |
           terraform workspace select prod || terraform workspace new prod
-      - name: Terraform Init
-        run: terraform init -input=false
       - name: Download Plan Artifact
         uses: actions/download-artifact@v4
         with:
