@@ -12,7 +12,7 @@ env:
 
 jobs:
   check:
-    name: 0 Terraform Check (fmt, validate, plan) [Prod]
+    name: Terraform Check (fmt, validate, plan) [Prod]
     runs-on: ubuntu-latest
     environment: prod
     steps:
@@ -43,7 +43,7 @@ jobs:
           name: tfplan
           path: tfplan.binary
   apply:
-    name:  Terraform Apply [Prod]
+    name: Terraform Apply [Prod]
     runs-on: ubuntu-latest
     needs: check
     if: github.event_name == 'workflow_dispatch'
