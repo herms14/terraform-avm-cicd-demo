@@ -10,15 +10,6 @@ module "naming" {
 resource "azurerm_resource_group" "this" {
   for_each = var.region_cidrs
   location = each.key
-<<<<<<< HEAD
-  name     = "${var.prefix}-rg-${each.value}"
-  tags = {
-    managedBy  = "Terraform"
-    CostCenter = "12345"
-    Environment = "Production"
-    Owner = "Hermes Miraflor"
-    Project = "Multi-Region VNet Peering"
-=======
   name     = "${var.prefix}-${terraform.workspace}-${each.key}-rg"
 
   tags = {
@@ -28,7 +19,6 @@ resource "azurerm_resource_group" "this" {
     Owner       = "Hermes Miraflor"
     Project     = "Multi-Region VNet Peering"
     CreationDate = formatdate("YYYY-MM-DD", timestamp())
->>>>>>> 19cbc1a (WIP: Save local changes before rebase and push)
   }
 }
 module "vnet" {
@@ -46,20 +36,14 @@ module "vnet" {
   }
 
   tags = {
-<<<<<<< HEAD
-    managedBy  = "Terraform"
-    CostCenter = "12345"
-    Environment = "Production"
-    Owner = "Hermes Miraflor"
-    Project = "Multi-Region VNet Peering"
-=======
+
     managedBy   = "Terraform"
     CostCenter  = "12345"
     Environment = terraform.workspace
     Owner       = "Hermes Miraflor"
     Project     = "Multi-Region VNet Peering"
     CreationDate = formatdate("YYYY-MM-DD", timestamp())
->>>>>>> 19cbc1a (WIP: Save local changes before rebase and push)
+
   }
 }
 locals {
