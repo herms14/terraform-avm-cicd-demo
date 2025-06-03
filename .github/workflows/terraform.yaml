@@ -75,8 +75,7 @@ jobs:
 
       - name: 🧪 Run Go tests
         run: |
-          cd terratest
-          go test -v -timeout 20m
+          go test -v -timeout 20m ./terratest
 
   terraform_docs:
     name: 📘 Generate Terraform Docs
