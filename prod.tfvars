@@ -1,5 +1,5 @@
 # prod.tfvars
-prefix = "bdo"
+prefix = "contoso"
 region_map = {
   "eastus" = "eus"
   "westeurope" = "weu"

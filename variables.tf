@@ -1,5 +1,5 @@
 variable "prefix" {
-  default = "bdo"
+  default = "contoso"
 }
 
 variable "region_cidrs" {

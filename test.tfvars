@@ -1,5 +1,5 @@
 # test.tfvars
-prefix = "bdo"
+prefix = "contoso"
 region_cidrs = {
   "westeurope" = "10.20.0.0/16"
 }
