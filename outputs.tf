@@ -4,3 +4,7 @@ output "vnet_ids" {
     region => mod.resource_id
   }
 }
+
+output "vnet_eastus_id" {
+  value = module.vnet["eastus"].resource_id
+}
