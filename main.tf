@@ -13,11 +13,11 @@ resource "azurerm_resource_group" "this" {
   name     = "${var.prefix}-${terraform.workspace}-${each.key}-rg"
 
   tags = {
-    managedBy   = "Terraform"
-    CostCenter  = "12345"
-    Environment = terraform.workspace
-    Owner       = "Hermes Miraflor"
-    Project     = "Multi-Region VNet Peering"
+    managedBy    = "Terraform"
+    CostCenter   = "12345"
+    Environment  = terraform.workspace
+    Owner        = "Hermes Miraflor"
+    Project      = "Multi-Region VNet Peering"
     CreationDate = formatdate("YYYY-MM-DD", timestamp())
   }
 }
@@ -37,11 +37,11 @@ module "vnet" {
 
   tags = {
 
-    managedBy   = "Terraform"
-    CostCenter  = "12345"
-    Environment = terraform.workspace
-    Owner       = "Hermes Miraflor"
-    Project     = "Multi-Region VNet Peering"
+    managedBy    = "Terraform"
+    CostCenter   = "12345"
+    Environment  = terraform.workspace
+    Owner        = "Hermes Miraflor"
+    Project      = "Multi-Region VNet Peering"
     CreationDate = formatdate("YYYY-MM-DD", timestamp())
 
   }
