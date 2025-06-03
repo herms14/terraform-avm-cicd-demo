@@ -35,7 +35,7 @@ Description: n/a
 
 Type: `string`
 
-Default: `"bdo"`
+Default: `"contoso"`
 
 ### <a name="input_region_cidrs"></a> [region\_cidrs](#input\_region\_cidrs)
 
