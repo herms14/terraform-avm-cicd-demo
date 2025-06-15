@@ -1,94 +1,313 @@
-<!-- BEGIN_TF_DOCS -->
-# This is simple Terraform demo to deploy a complete CI/CD pipeline on Azure
 
-<!-- markdownlint-disable MD033 -->
-## Requirements
+# 🌳 Erdtree Self-Service Deployment Portal
 
-The following requirements are needed by this module:
+[![Azure](https://img.shields.io/badge/Azure-0089D0?style=for-the-badge&logo=microsoft-azure&logoColor=white)](https://portal.azure.com)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
+[![Terraform](https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)](https://terraform.io)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://typescriptlang.org)
 
-- <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) (>= 1.9, < 2.0)
+A comprehensive Azure infrastructure self-service portal that enables users to deploy Azure resources through an approval workflow using Azure Verified Modules and Terraform.
 
-- <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) (~> 3.74)
+## 🚀 **Live Demo**
 
-- <a name="requirement_http"></a> [http](#requirement\_http) (~> 3.4)
+**Portal URL**: [https://erdtree-portal-prod-68648.azurewebsites.net](https://erdtree-portal-prod-68648.azurewebsites.net)
 
-- <a name="requirement_random"></a> [random](#requirement\_random) (~> 3.5)
+## 📋 **Features**
 
-## Resources
+### **🎯 Self-Service Portal**
+- **Resource Selection**: Choose from 6 Azure resource types with intuitive cards
+- **Dynamic Forms**: Auto-generated forms based on Terraform variable schemas
+- **Environment Selection**: Deploy to development or production environments
+- **Subscription Management**: Support for multiple Azure subscriptions
 
-The following resources are used by this module:
+### **🔐 Authentication & Security**
+- **Azure AD Integration**: Single sign-on with Microsoft accounts
+- **Role-Based Access Control**: Configurable user roles and permissions
+- **Secure API Communication**: OAuth 2.0 with Azure AD tokens
 
-- [azurerm_resource_group.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group) (resource)
+### **📧 Approval Workflow**
+- **Email-Based Approvals**: Automated approval requests to designated approvers
+- **Logic App Integration**: Azure Logic Apps for workflow orchestration
+- **Status Tracking**: Real-time deployment status and history
 
-<!-- markdownlint-disable MD013 -->
-## Required Inputs
+### **🏗️ Infrastructure as Code**
+- **Azure Verified Modules**: Industry-standard Terraform modules
+- **GitOps Workflow**: Infrastructure changes through version control
+- **Automated Testing**: Terratest validation for infrastructure
+- **Multi-Environment**: Separate configurations for dev/prod
 
-No required inputs.
+### **📊 Monitoring & Governance**
+- **Application Insights**: User behavior and performance monitoring
+- **Audit Logging**: Complete trail of all deployment activities
+- **Cost Management**: Budget alerts and cost tracking
+- **Compliance**: Standard tags and governance policies
 
-## Optional Inputs
+## 🏗️ **Architecture**
 
-The following input variables are optional (have default values):
-
-### <a name="input_prefix"></a> [prefix](#input\_prefix)
-
-Description: n/a
-
-Type: `string`
-
-Default: `"contoso"`
-
-### <a name="input_region_cidrs"></a> [region\_cidrs](#input\_region\_cidrs)
-
-Description: n/a
-
-Type: `map(string)`
-
-Default:
-
-```json
-{
-  "eastus": "10.0.0.0/16",
-  "southeastasia": "10.2.0.0/16",
-  "westeurope": "10.1.0.0/16"
-}
+```mermaid
+graph TB
+    User[👤 User] --> Portal[🌐 React Portal]
+    Portal --> AAD[🔐 Azure AD]
+    Portal --> LogicApp[🔄 Logic App]
+    LogicApp --> Approver[📧 Approver Email]
+    LogicApp --> GitHub[📁 GitHub Actions]
+    GitHub --> Terraform[🏗️ Terraform]
+    Terraform --> AVM[📦 Azure Verified Modules]
+    AVM --> Azure[☁️ Azure Resources]
+    Portal --> AppInsights[📊 Application Insights]
+    GitHub --> Tests[🧪 Terratest]
 ```
 
-## Outputs
+## 📦 **Supported Azure Resources**
 
-The following outputs are exported:
+| Resource Type | Icon | Description | Status |
+|---------------|------|-------------|--------|
+| **Windows VM** | 🖥️ | Windows Server virtual machines | ✅ Ready |
+| **Linux VM** | 🐧 | Linux virtual machines (Ubuntu, RHEL, etc.) | ✅ Ready |
+| **Storage Account** | 💾 | Blob, file, and queue storage | ✅ Ready |
+| **Virtual Network** | 🌐 | VNets with subnets and NSGs | ✅ Ready |
+| **Web App** | 🌍 | App Service for web applications | ✅ Ready |
+| **Load Balancer** | ⚖️ | Traffic distribution and high availability | ✅ Ready |
+| **Application Gateway** | 🚪 | Layer 7 load balancer with SSL termination | 🚧 Planned |
+| **Azure Database** | 🗄️ | Managed database services | 🚧 Planned |
 
-### <a name="output_vnet_ids"></a> [vnet\_ids](#output\_vnet\_ids)
+## 🚀 **Quick Start**
 
-Description: n/a
+### **Prerequisites**
+- Azure subscription with Contributor access
+- Node.js 18+ for local development
+- Azure CLI or Azure PowerShell
+- Git for version control
 
-## Modules
+### **1. Clone Repository**
+```bash
+git clone https://github.com/YOUR_USERNAME/erdtree-self-service.git
+cd erdtree-self-service
+```
 
-The following Modules are called:
+### **2. Deploy Infrastructure**
+```bash
+# Option A: Azure CLI
+az deployment group create \
+  --resource-group erdtree-portal-rg \
+  --template-file scripts/erdtree-infrastructure.json
 
-### <a name="module_naming"></a> [naming](#module\_naming)
+# Option B: Azure Portal
+# Use the ARM template in scripts/erdtree-infrastructure.json
+```
 
-Source: Azure/naming/azurerm
+### **3. Configure Azure AD**
+```bash
+# Create app registration
+az ad app create \
+  --display-name "Erdtree Self-Service Portal" \
+  --web-redirect-uris "https://your-app.azurewebsites.net"
 
-Version: ~> 0.3
+# Add API permissions (see docs/DEPLOYMENT.md for details)
+```
 
-### <a name="module_regions"></a> [regions](#module\_regions)
+### **4. Deploy Frontend**
+```bash
+cd frontend/
+npm install
+npm run build
 
-Source: Azure/regions/azurerm
+# Deploy to Azure App Service
+az webapp deployment source config-zip \
+  --resource-group erdtree-portal-rg \
+  --name your-web-app \
+  --src build.zip
+```
 
-Version: ~> 0.3
+### **5. Test Portal**
+1. Navigate to your Web App URL
+2. Sign in with Azure AD
+3. Select a resource and test the workflow
 
-### <a name="module_vnet"></a> [vnet](#module\_vnet)
+## 📖 **Documentation**
 
-Source: Azure/avm-res-network-virtualnetwork/azurerm
+### **📚 Getting Started**
+- [📋 Deployment Guide](docs/DEPLOYMENT.md) - Complete step-by-step deployment
+- [⚙️ Configuration](docs/CONFIGURATION.md) - Portal and Azure configuration
+- [🧪 Testing Guide](docs/TESTING.md) - How to test the portal
 
-Version: 0.8.1
+### **🔧 Development**
+- [🏗️ Architecture](docs/ARCHITECTURE.md) - System design and components
+- [💻 Development Setup](docs/DEVELOPMENT.md) - Local development environment
+- [🔌 API Reference](docs/API.md) - Backend API documentation
 
-### <a name="module_vnet_peerings"></a> [vnet\_peerings](#module\_vnet\_peerings)
+### **🚀 Operations**
+- [📊 Monitoring](docs/MONITORING.md) - Observability and alerting
+- [🔒 Security](docs/SECURITY.md) - Security considerations
+- [💰 Cost Management](docs/COST_MANAGEMENT.md) - FinOps and optimization
 
-Source: Azure/avm-res-network-virtualnetwork/azurerm//modules/peering
+### **📑 Reference**
+- [🏷️ Terraform Variables](docs/TERRAFORM_VARIABLES.md) - All configurable parameters
+- [📧 Email Templates](docs/templates/) - Approval and notification templates
+- [🔧 Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 
-Version:
+## 🛠️ **Technology Stack**
 
-Data Collection
-The software may collect information about you and your use of the software and send it to Microsoft. Microsoft may use this information to provide services and improve our products and services. You may turn off the telemetry as described in the repository. There are also some features in the software that may enable you and Microsoft to collect data from users of your applications. If you use these features, you must comply with applicable law, including providing appropriate notices to users of your applications together with a copy of Microsoft’s privacy statement. Our privacy statement is located at https://go.microsoft.com/fwlink/?LinkID=824704. You can learn more about data collection and use in the help documentation and our privacy statement. Your use of the software operates as your consent to these practices.
-<!-- END_TF_DOCS -->
+### **Frontend**
+- **React 18** - Modern UI framework
+- **TypeScript** - Type safety and developer experience
+- **TailwindCSS** - Utility-first CSS framework
+- **Azure MSAL** - Microsoft Authentication Library
+- **React Hook Form** - Form validation and management
+
+### **Backend & Infrastructure**
+- **Azure App Service** - Hosting platform
+- **Azure Logic Apps** - Workflow orchestration
+- **Azure AD** - Identity and access management
+- **Application Insights** - Monitoring and telemetry
+- **Azure Storage** - File and state storage
+
+### **Infrastructure as Code**
+- **Terraform** - Infrastructure provisioning
+- **Azure Verified Modules** - Standardized Terraform modules
+- **GitHub Actions** - CI/CD pipelines
+- **Terratest** - Infrastructure testing
+- **Terradocs** - Documentation generation
+
+## 🏷️ **Standard Tags**
+
+All deployed resources include consistent tags for governance:
+
+| Tag | Value | Purpose |
+|-----|-------|---------|
+| `deployedBy` | Hermes | Deployment source tracking |
+| `managedBy` | Terraform | Infrastructure management |
+| `environment` | dev/prod | Environment classification |
+| `application` | erdtree-portal | Application grouping |
+| `resourceType` | vm/storage/etc | Resource categorization |
+| `deploymentId` | unique-id | Deployment traceability |
+
+## 📊 **Monitoring & Observability**
+
+### **Application Insights Dashboards**
+- **User Analytics**: Portal usage and adoption metrics
+- **Performance**: Response times and error rates
+- **Deployment Metrics**: Success rates and resource preferences
+- **Cost Tracking**: Resource deployment costs over time
+
+### **Log Analytics Queries**
+```kusto
+// Deployment audit trail
+AzureActivity
+| where ResourceProvider == "Microsoft.Resources"
+| where Properties contains "erdtree"
+| project TimeGenerated, Caller, ActivityStatusValue, ResourceGroup
+
+// User authentication events
+SigninLogs
+| where AppDisplayName == "Erdtree Self-Service Portal"
+| summarize Count=count() by UserPrincipalName, ResultType
+```
+
+## 💰 **Cost Management**
+
+### **Current Costs** (Free Tier Deployment)
+- **App Service**: $0/month (Free tier)
+- **Application Insights**: $0/month (first 5GB free)
+- **Storage Account**: ~$1/month (minimal usage)
+- **Azure AD**: $0/month (included)
+
+### **Production Costs** (Estimated)
+- **App Service Basic**: ~$13/month
+- **Logic Apps**: ~$10/month
+- **Application Insights**: ~$5/month
+- **Storage**: ~$2/month
+- **Total**: ~$30/month
+
+## 🔒 **Security**
+
+### **Authentication**
+- Azure AD integration with OAuth 2.0
+- Role-based access control (RBAC)
+- Multi-factor authentication support
+- Conditional access policies
+
+### **Data Protection**
+- All communications over HTTPS
+- Secrets stored in Azure Key Vault
+- No sensitive data in logs or telemetry
+- Regular security scanning
+
+### **Compliance**
+- SOC 2 Type II (Azure platform)
+- ISO 27001 (Azure platform)
+- GDPR compliance for EU users
+- Audit logging for all activities
+
+## 🤝 **Contributing**
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### **Development Workflow**
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+### **Code Standards**
+- TypeScript for type safety
+- ESLint for code quality
+- Prettier for formatting
+- Conventional commits for git history
+
+## 📝 **License**
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 **Support**
+
+### **Getting Help**
+- 📖 **Documentation**: Check the `/docs` folder
+- 🐛 **Issues**: Submit GitHub issues for bugs
+- 💡 **Feature Requests**: Use GitHub discussions
+- 📧 **Contact**: hemirafl@microsoft.com
+
+### **Community**
+- 💬 **Discussions**: GitHub Discussions for Q&A
+- 📺 **Demos**: Monthly demo sessions
+- 📚 **Wiki**: Detailed guides and tutorials
+
+## 🎯 **Roadmap**
+
+### **v1.1 - Enhanced Resources** (Q2 2025)
+- [ ] Azure Database support (SQL, PostgreSQL, MySQL)
+- [ ] Application Gateway with SSL
+- [ ] Azure Kubernetes Service (AKS)
+- [ ] Network Security Groups
+
+### **v1.2 - Advanced Features** (Q3 2025)
+- [ ] Resource scheduling and lifecycle management
+- [ ] Cost optimization recommendations
+- [ ] Multi-region deployments
+- [ ] Integration with Azure DevOps
+
+### **v2.0 - Enterprise Features** (Q4 2025)
+- [ ] Custom resource definitions
+- [ ] Advanced RBAC with custom roles
+- [ ] API for external integrations
+- [ ] Advanced analytics and reporting
+
+---
+
+## 🏆 **Acknowledgments**
+
+- **Azure Verified Modules Team** - For standardized Terraform modules
+- **Microsoft Azure Team** - For the robust cloud platform
+- **Terraform Community** - For infrastructure as code excellence
+- **React Community** - For the amazing frontend framework
+
+---
+
+<div align="center">
+
+**Built with ❤️ for the Azure community**
+
+[🌐 Live Demo](https://erdtree-portal-prod-68648.azurewebsites.net) • [📖 Documentation](docs/) • [🐛 Issues](https://github.com/YOUR_USERNAME/erdtree-self-service/issues) • [💡 Discussions](https://github.com/YOUR_USERNAME/erdtree-self-service/discussions)
+
+</div>

@@ -1,0 +1,164 @@
+name: Terraform Deploy
+
+on:
+  repository_dispatch:
+    types: [terraform-deploy]
+
+env:
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  TF_VAR_deployment_id: ${{ github.event.client_payload.deployment_id }}
+
+jobs:
+  terraform-deploy:
+    name: 'Terraform Deploy'
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.client_payload.environment }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.0
+
+    - name: Setup Go (for Terratest)
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Create tfvars file
+      run: |
+        mkdir -p terraform/deployments/${{ github.event.client_payload.deployment_id }}
+        echo '${{ toJson(github.event.client_payload.tfvars) }}' > terraform/deployments/${{ github.event.client_payload.deployment_id }}/terraform.tfvars.json
+
+    - name: Terraform Init
+      run: |
+        cd terraform/environments/${{ github.event.client_payload.environment }}
+        terraform init \
+          -backend-config="resource_group_name=erdtree-terraform-state" \
+          -backend-config="storage_account_name=erdtreetfstate${{ github.event.client_payload.environment }}" \
+          -backend-config="container_name=tfstate" \
+          -backend-config="key=${{ github.event.client_payload.resource_type }}/${{ github.event.client_payload.deployment_id }}.tfstate"
+
+    - name: Terraform Validate
+      run: |
+        cd terraform/environments/${{ github.event.client_payload.environment }}
+        terraform validate
+
+    - name: Terraform Format Check
+      run: |
+        cd terraform/environments/${{ github.event.client_payload.environment }}
+        terraform fmt -check -recursive
+
+    - name: Terraform Plan
+      id: plan
+      run: |
+        cd terraform/environments/${{ github.event.client_payload.environment }}
+        terraform plan \
+          -var-file="../../deployments/${{ github.event.client_payload.deployment_id }}/terraform.tfvars.json" \
+          -var="subscription_id=${{ secrets.ARM_SUBSCRIPTION_ID }}" \
+          -var="resource_type=${{ github.event.client_payload.resource_type }}" \
+          -var="deployment_id=${{ github.event.client_payload.deployment_id }}" \
+          -out=tfplan \
+          -detailed-exitcode
+
+    - name: Terraform Apply
+      if: steps.plan.outputs.exitcode == 2
+      run: |
+        cd terraform/environments/${{ github.event.client_payload.environment }}
+        terraform apply -auto-approve tfplan
+
+    - name: Terraform Output
+      id: output
+      run: |
+        cd terraform/environments/${{ github.event.client_payload.environment }}
+        terraform output -json > ../../deployments/${{ github.event.client_payload.deployment_id }}/outputs.json
+
+    - name: Run Terratest
+      run: |
+        cd terraform/test
+        go mod tidy
+        go test -v -timeout 30m -run TestTerraform${{ github.event.client_payload.resource_type }}
+
+    - name: Generate Terradocs
+      run: |
+        docker run --rm \
+          -v ${{ github.workspace }}/terraform:/terraform-docs \
+          -u $(id -u):$(id -g) \
+          quay.io/terraform-docs/terraform-docs:latest \
+          markdown table --output-file /terraform-docs/deployments/${{ github.event.client_payload.deployment_id }}/README.md \
+          /terraform-docs/environments/${{ github.event.client_payload.environment }}
+
+    - name: Upload Deployment Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: deployment-${{ github.event.client_payload.deployment_id }}
+        path: |
+          terraform/deployments/${{ github.event.client_payload.deployment_id }}/
+        retention-days: 30
+
+    - name: Send Success Notification
+      if: success()
+      uses: ./.github/actions/send-notification
+      with:
+        type: 'success'
+        recipient: ${{ github.event.client_payload.requested_by }}
+        deployment_id: ${{ github.event.client_payload.deployment_id }}
+        resource_type: ${{ github.event.client_payload.resource_type }}
+        environment: ${{ github.event.client_payload.environment }}
+        subscription: ${{ github.event.client_payload.subscription }}
+        outputs: ${{ steps.output.outputs.stdout }}
+
+    - name: Send Failure Notification
+      if: failure()
+      uses: ./.github/actions/send-notification
+      with:
+        type: 'failure'
+        recipient: ${{ github.event.client_payload.requested_by }}
+        deployment_id: ${{ github.event.client_payload.deployment_id }}
+        resource_type: ${{ github.event.client_payload.resource_type }}
+        environment: ${{ github.event.client_payload.environment }}
+        subscription: ${{ github.event.client_payload.subscription }}
+        error_message: 'Deployment failed. Check the workflow logs for details.'
+
+  cleanup:
+    name: 'Cleanup on Failure'
+    runs-on: ubuntu-latest
+    needs: terraform-deploy
+    if: failure()
+    environment: ${{ github.event.client_payload.environment }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.0
+
+    - name: Terraform Init
+      run: |
+        cd terraform/environments/${{ github.event.client_payload.environment }}
+        terraform init \
+          -backend-config="resource_group_name=erdtree-terraform-state" \
+          -backend-config="storage_account_name=erdtreetfstate${{ github.event.client_payload.environment }}" \
+          -backend-config="container_name=tfstate" \
+          -backend-config="key=${{ github.event.client_payload.resource_type }}/${{ github.event.client_payload.deployment_id }}.tfstate"
+
+    - name: Terraform Destroy (if resources were created)
+      run: |
+        cd terraform/environments/${{ github.event.client_payload.environment }}
+        if terraform show | grep -q "# "; then
+          terraform destroy \
+            -var-file="../../deployments/${{ github.event.client_payload.deployment_id }}/terraform.tfvars.json" \
+            -var="subscription_id=${{ secrets.ARM_SUBSCRIPTION_ID }}" \
+            -var="resource_type=${{ github.event.client_payload.resource_type }}" \
+            -var="deployment_id=${{ github.event.client_payload.deployment_id }}" \
+            -auto-approve
+        fi
