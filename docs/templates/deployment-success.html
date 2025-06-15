@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erdtree Deployment Successful</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #28a745;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+        .success-banner {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .success-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .success-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #155724;
+            margin-bottom: 5px;
+        }
+        .success-subtitle {
+            color: #155724;
+        }
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .details-table th,
+        .details-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .details-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        .output-section {
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+        .output-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+        .output-content {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            overflow-x: auto;
+        }
+        .next-steps {
+            background-color: #e7f3ff;
+            border: 1px solid #bee5eb;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 14px;
+            color: white;
+            background-color: #0078d4;
+        }
+        .btn:hover {
+            background-color: #106ebe;
+        }
+        .footer {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 12px;
+        }
+        .resource-list {
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .resource-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        .resource-item:last-child {
+            border-bottom: none;
+        }
+        .resource-name {
+            font-weight: 600;
+            color: #0078d4;
+        }
+        .resource-id {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🌳 Erdtree Self-Service Portal</div>
+            <div class="subtitle">Azure Infrastructure Deployment Platform</div>
+        </div>
+
+        <div class="success-banner">
+            <div class="success-icon">✅</div>
+            <div class="success-title">Deployment Successful!</div>
+            <div class="success-subtitle">Your Azure resources have been successfully deployed</div>
+        </div>
+
+        <div class="content">
+            <h2>Deployment Summary</h2>
+            <p>Your infrastructure deployment has been completed successfully. All resources are now available for use.</p>
+
+            <table class="details-table">
+                <tr>
+                    <th>Deployment ID</th>
+                    <td>{{deployment_id}}</td>
+                </tr>
+                <tr>
+                    <th>Resource Type</th>
+                    <td>{{resource_type}}</td>
+                </tr>
+                <tr>
+                    <th>Environment</th>
+                    <td>{{environment}}</td>
+                </tr>
+                <tr>
+                    <th>Subscription</th>
+                    <td>{{subscription}}</td>
+                </tr>
+                <tr>
+                    <th>Resource Group</th>
+                    <td>{{resource_group_name}}</td>
+                </tr>
+                <tr>
+                    <th>Region</th>
+                    <td>{{location}}</td>
+                </tr>
+                <tr>
+                    <th>Deployed At</th>
+                    <td>{{deployed_at}}</td>
+                </tr>
+                <tr>
+                    <th>Approved By</th>
+                    <td>{{approved_by}}</td>
+                </tr>
+            </table>
+
+            <div class="output-section">
+                <div class="output-title">🔧 Deployed Resources</div>
+                <div class="resource-list">
+                    {{#each resources}}
+                    <div class="resource-item">
+                        <div class="resource-name">{{name}}</div>
+                        <div class="resource-id">{{resource_id}}</div>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+
+            <div class="output-section">
+                <div class="output-title">📊 Terraform Outputs</div>
+                <div class="output-content">{{terraform_outputs}}</div>
+            </div>
+
+            <div class="next-steps">
+                <h3>🚀 Next Steps</h3>
+                <ul>
+                    <li><strong>Access your resources:</strong> Use the Azure Portal or Azure CLI to manage your deployed infrastructure</li>
+                    <li><strong>Monitor costs:</strong> Track spending using Azure Cost Management + Billing</li>
+                    <li><strong>Set up monitoring:</strong> Configure Azure Monitor alerts for your resources</li>
+                    <li><strong>Backup strategy:</strong> Implement appropriate backup policies for critical resources</li>
+                </ul>
+            </div>
+
+            <div style="text-align: center; margin: 20px 0;">
+                <a href="https://portal.azure.com/#@{{tenant_id}}/resource/subscriptions/{{subscription_id}}/resourceGroups/{{resource_group_name}}/overview" class="btn">
+                    🔗 View in Azure Portal
+                </a>
+                <a href="https://github.com/your-org/erdtree-infrastructure/actions" class="btn">
+                    📋 View Deployment Logs
+                </a>
+            </div>
+
+            <div class="output-section">
+                <div class="output-title">🏷️ Applied Tags</div>
+                <div class="resource-list">
+                    <div class="resource-item">
+                        <strong>deployedBy:</strong> Hermes
+                    </div>
+                    <div class="resource-item">
+                        <strong>managedBy:</strong> Terraform
+                    </div>
+                    <div class="resource-item">
+                        <strong>environment:</strong> {{environment}}
+                    </div>
+                    <div class="resource-item">
+                        <strong>application:</strong> erdtree-portal
+                    </div>
+                    <div class="resource-item">
+                        <strong>resourceType:</strong> {{resource_type}}
+                    </div>
+                    <div class="resource-item">
+                        <strong>deploymentId:</strong> {{deployment_id}}
+                    </div>
+                </div>
+            </div>
+
+            <div class="output-section">
+                <div class="output-title">💡 Important Notes</div>
+                <ul>
+                    <li>All resources are tagged with standard metadata for governance and cost tracking</li>
+                    <li>Resources are deployed using Azure Verified Modules for best practices compliance</li>
+                    <li>Infrastructure changes are managed through GitOps workflow</li>
+                    <li>For modifications or deletions, please use the Erdtree portal or contact the infrastructure team</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🌳 Erdtree Self-Service Portal | Deployment completed successfully</p>
+            <p>Questions? Contact the Infrastructure Team or visit our <a href="https://github.com/your-org/erdtree-infrastructure">GitHub Repository</a></p>
+            <p>© {{current_year}} Microsoft Corporation - Erdtree Infrastructure Team</p>
+        </div>
+    </div>
+</body>
+</html>

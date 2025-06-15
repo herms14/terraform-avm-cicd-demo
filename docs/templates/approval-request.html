@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erdtree Deployment Approval Required</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #0078d4;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0078d4;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .details-table th,
+        .details-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .details-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        .config-section {
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #0078d4;
+        }
+        .config-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+        .config-content {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            overflow-x: auto;
+        }
+        .actions {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            margin: 0 10px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        .btn-approve {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-approve:hover {
+            background-color: #218838;
+        }
+        .btn-reject {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn-reject:hover {
+            background-color: #c82333;
+        }
+        .footer {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 12px;
+        }
+        .urgent {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        .urgent-icon {
+            color: #856404;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🌳 Erdtree Self-Service Portal</div>
+            <div class="subtitle">Azure Infrastructure Deployment Platform</div>
+        </div>
+
+        <div class="urgent">
+            <span class="urgent-icon">⚠️ APPROVAL REQUIRED</span> - A new deployment request requires your attention
+        </div>
+
+        <div class="content">
+            <h2>Deployment Approval Request</h2>
+            <p>A new Azure infrastructure deployment has been requested and requires your approval before proceeding.</p>
+
+            <table class="details-table">
+                <tr>
+                    <th>Deployment ID</th>
+                    <td>{{deployment_id}}</td>
+                </tr>
+                <tr>
+                    <th>Requested By</th>
+                    <td>{{requested_by}}</td>
+                </tr>
+                <tr>
+                    <th>Resource Type</th>
+                    <td>{{resource_type}}</td>
+                </tr>
+                <tr>
+                    <th>Environment</th>
+                    <td>{{environment}}</td>
+                </tr>
+                <tr>
+                    <th>Subscription</th>
+                    <td>{{subscription}}</td>
+                </tr>
+                <tr>
+                    <th>Requested At</th>
+                    <td>{{requested_at}}</td>
+                </tr>
+            </table>
+
+            <div class="config-section">
+                <div class="config-title">📋 Configuration Details</div>
+                <div class="config-content">{{tfvars_json}}</div>
+            </div>
+
+            <div class="config-section">
+                <div class="config-title">💰 Estimated Cost Impact</div>
+                <p>Please review the estimated monthly cost for this deployment:</p>
+                <ul>
+                    <li><strong>Resource Type:</strong> {{resource_type}}</li>
+                    <li><strong>Region:</strong> {{location}}</li>
+                    <li><strong>Environment:</strong> {{environment}}</li>
+                    <li><strong>Note:</strong> Use Azure Cost Management for precise cost analysis</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="actions">
+            <a href="{{approve_url}}" class="btn btn-approve">✅ APPROVE DEPLOYMENT</a>
+            <a href="{{reject_url}}" class="btn btn-reject">❌ REJECT DEPLOYMENT</a>
+        </div>
+
+        <div class="content">
+            <h3>⚡ What happens next?</h3>
+            <ul>
+                <li><strong>If Approved:</strong> The deployment will be automatically processed via GitHub Actions using Terraform and Azure Verified Modules</li>
+                <li><strong>If Rejected:</strong> The requester will be notified and no resources will be deployed</li>
+            </ul>
+
+            <h3>🔍 Review Checklist</h3>
+            <ul>
+                <li>Does the request align with organizational policies?</li>
+                <li>Are the resource specifications appropriate for the intended use?</li>
+                <li>Is the cost estimate acceptable for the project budget?</li>
+                <li>Has the requester followed proper naming conventions?</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>This is an automated message from the Erdtree Self-Service Portal</p>
+            <p>If you cannot approve/reject using the buttons above, please contact the requester directly</p>
+            <p>© {{current_year}} Microsoft Corporation - Erdtree Infrastructure Team</p>
+        </div>
+    </div>
+</body>
+</html>

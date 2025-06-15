@@ -1,0 +1,200 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2016-06-01/Microsoft.Logic.json",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "approverEmail": {
+      "type": "string",
+      "defaultValue": "hemirafl@microsoft.com"
+    },
+    "githubActionsUrl": {
+      "type": "string",
+      "defaultValue": "https://api.github.com/repos/your-org/erdtree-infrastructure/dispatches"
+    },
+    "githubToken": {
+      "type": "securestring"
+    }
+  },
+  "triggers": {
+    "manual": {
+      "type": "Request",
+      "kind": "Http",
+      "inputs": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "deploymentId": { "type": "string" },
+            "resourceType": { "type": "string" },
+            "environment": { "type": "string" },
+            "subscription": { "type": "string" },
+            "requestedBy": { "type": "string" },
+            "tfvars": { "type": "object" }
+          },
+          "required": ["deploymentId", "resourceType", "requestedBy", "tfvars"]
+        }
+      }
+    }
+  },
+  "actions": {
+    "Send_approval_email": {
+      "type": "ApiConnection",
+      "inputs": {
+        "host": {
+          "connection": {
+            "name": "@parameters('$connections')['outlook']['connectionId']"
+          }
+        },
+        "method": "post",
+        "path": "/v2/Mail",
+        "body": {
+          "To": "@parameters('approverEmail')",
+          "Subject": "Erdtree Deployment Approval Required: @{triggerBody()['resourceType']}",
+          "Body": "<html><body><h2>Deployment Approval Request</h2><p><strong>Requested by:</strong> @{triggerBody()['requestedBy']}</p><p><strong>Resource Type:</strong> @{triggerBody()['resourceType']}</p><p><strong>Environment:</strong> @{triggerBody()['environment']}</p><p><strong>Subscription:</strong> @{triggerBody()['subscription']}</p><p><strong>Deployment ID:</strong> @{triggerBody()['deploymentId']}</p><hr/><h3>Configuration Details:</h3><pre>@{json(triggerBody()['tfvars'])}</pre><hr/><p><strong>Actions:</strong></p><p><a href=\"@{listCallbackUrl()}?approve=true&deploymentId=@{triggerBody()['deploymentId']}\" style=\"background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;\">✅ APPROVE</a></p><p><a href=\"@{listCallbackUrl()}?approve=false&deploymentId=@{triggerBody()['deploymentId']}\" style=\"background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;\">❌ REJECT</a></p></body></html>",
+          "Importance": "High"
+        }
+      },
+      "runAfter": {}
+    },
+    "Wait_for_approval": {
+      "type": "ApiConnection",
+      "inputs": {
+        "host": {
+          "connection": {
+            "name": "@parameters('$connections')['outlook']['connectionId']"
+          }
+        },
+        "method": "post",
+        "path": "/approvalmail",
+        "body": {
+          "NotificationUrl": "@{listCallbackUrl()}",
+          "Message": {
+            "To": "@parameters('approverEmail')",
+            "Subject": "Erdtree Deployment Approval: @{triggerBody()['resourceType']}",
+            "Options": "Approve, Reject",
+            "Body": "Please approve or reject this deployment request.\n\nResource: @{triggerBody()['resourceType']}\nRequested by: @{triggerBody()['requestedBy']}\nEnvironment: @{triggerBody()['environment']}\nSubscription: @{triggerBody()['subscription']}\n\nDeployment ID: @{triggerBody()['deploymentId']}\n\nConfiguration:\n@{json(triggerBody()['tfvars'])}"
+          }
+        }
+      },
+      "runAfter": {
+        "Send_approval_email": ["Succeeded"]
+      }
+    },
+    "Check_approval_response": {
+      "type": "Switch",
+      "expression": "@body('Wait_for_approval')?['SelectedOption']",
+      "cases": {
+        "Approved": {
+          "case": "Approve",
+          "actions": {
+            "Trigger_GitHub_Actions": {
+              "type": "Http",
+              "inputs": {
+                "method": "POST",
+                "uri": "@parameters('githubActionsUrl')",
+                "headers": {
+                  "Authorization": "token @{parameters('githubToken')}",
+                  "Accept": "application/vnd.github.v3+json",
+                  "Content-Type": "application/json"
+                },
+                "body": {
+                  "event_type": "terraform-deploy",
+                  "client_payload": {
+                    "deployment_id": "@{triggerBody()['deploymentId']}",
+                    "resource_type": "@{triggerBody()['resourceType']}",
+                    "environment": "@{triggerBody()['environment']}",
+                    "subscription": "@{triggerBody()['subscription']}",
+                    "requested_by": "@{triggerBody()['requestedBy']}",
+                    "tfvars": "@{triggerBody()['tfvars']}",
+                    "approved_by": "@{body('Wait_for_approval')?['ApprovalBy']}",
+                    "approved_at": "@{utcNow()}"
+                  }
+                }
+              }
+            },
+            "Send_approval_confirmation": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['outlook']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "/v2/Mail",
+                "body": {
+                  "To": "@{triggerBody()['requestedBy']}",
+                  "Cc": "@parameters('approverEmail')",
+                  "Subject": "✅ Deployment Approved - @{triggerBody()['resourceType']}",
+                  "Body": "<html><body><h2>Deployment Approved</h2><p>Your deployment request has been approved and is now being processed.</p><p><strong>Deployment ID:</strong> @{triggerBody()['deploymentId']}</p><p><strong>Resource Type:</strong> @{triggerBody()['resourceType']}</p><p><strong>Environment:</strong> @{triggerBody()['environment']}</p><p><strong>Approved by:</strong> @{body('Wait_for_approval')?['ApprovalBy']}</p><p><strong>Approved at:</strong> @{utcNow()}</p><p>You will receive another email once the deployment completes.</p></body></html>",
+                  "Importance": "Normal"
+                }
+              },
+              "runAfter": {
+                "Trigger_GitHub_Actions": ["Succeeded"]
+              }
+            }
+          }
+        },
+        "Rejected": {
+          "case": "Reject",
+          "actions": {
+            "Send_rejection_notification": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['outlook']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "/v2/Mail",
+                "body": {
+                  "To": "@{triggerBody()['requestedBy']}",
+                  "Cc": "@parameters('approverEmail')",
+                  "Subject": "❌ Deployment Rejected - @{triggerBody()['resourceType']}",
+                  "Body": "<html><body><h2>Deployment Rejected</h2><p>Your deployment request has been rejected.</p><p><strong>Deployment ID:</strong> @{triggerBody()['deploymentId']}</p><p><strong>Resource Type:</strong> @{triggerBody()['resourceType']}</p><p><strong>Environment:</strong> @{triggerBody()['environment']}</p><p><strong>Rejected by:</strong> @{body('Wait_for_approval')?['ApprovalBy']}</p><p><strong>Rejected at:</strong> @{utcNow()}</p><p>Please contact the approver if you need clarification or wish to resubmit with modifications.</p></body></html>",
+                  "Importance": "Normal"
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "actions": {
+          "Send_error_notification": {
+            "type": "ApiConnection",
+            "inputs": {
+              "host": {
+                "connection": {
+                  "name": "@parameters('$connections')['outlook']['connectionId']"
+                }
+              },
+              "method": "post",
+              "path": "/v2/Mail",
+              "body": {
+                "To": "@{triggerBody()['requestedBy']}",
+                "Cc": "@parameters('approverEmail')",
+                "Subject": "⚠️ Deployment Processing Error - @{triggerBody()['resourceType']}",
+                "Body": "<html><body><h2>Deployment Processing Error</h2><p>There was an error processing your deployment approval.</p><p><strong>Deployment ID:</strong> @{triggerBody()['deploymentId']}</p><p><strong>Resource Type:</strong> @{triggerBody()['resourceType']}</p><p>Please contact the administrator for assistance.</p></body></html>",
+                "Importance": "High"
+              }
+            }
+          }
+        }
+      },
+      "runAfter": {
+        "Wait_for_approval": ["Succeeded"]
+      }
+    }
+  },
+  "outputs": {
+    "deploymentId": {
+      "type": "string",
+      "value": "@{triggerBody()['deploymentId']}"
+    },
+    "approvalStatus": {
+      "type": "string",
+      "value": "@{body('Wait_for_approval')?['SelectedOption']}"
+    }
+  }
+}

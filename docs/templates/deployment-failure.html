@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erdtree Deployment Failed</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #dc3545;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #dc3545;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+        .error-banner {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .error-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #721c24;
+            margin-bottom: 5px;
+        }
+        .error-subtitle {
+            color: #721c24;
+        }
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .details-table th,
+        .details-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .details-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        .error-section {
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #dc3545;
+        }
+        .error-section-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+        .error-content {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            overflow-x: auto;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .troubleshooting {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 14px;
+            color: white;
+            background-color: #0078d4;
+        }
+        .btn:hover {
+            background-color: #106ebe;
+        }
+        .btn-retry {
+            background-color: #28a745;
+        }
+        .btn-retry:hover {
+            background-color: #218838;
+        }
+        .footer {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 12px;
+        }
+        .common-issues {
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .issue-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        .issue-item:last-child {
+            border-bottom: none;
+        }
+        .issue-title {
+            font-weight: 600;
+            color: #dc3545;
+        }
+        .issue-solution {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🌳 Erdtree Self-Service Portal</div>
+            <div class="subtitle">Azure Infrastructure Deployment Platform</div>
+        </div>
+
+        <div class="error-banner">
+            <div class="error-icon">❌</div>
+            <div class="error-title">Deployment Failed</div>
+            <div class="error-subtitle">There was an error deploying your Azure resources</div>
+        </div>
+
+        <div class="content">
+            <h2>Deployment Error Summary</h2>
+            <p>Unfortunately, your infrastructure deployment encountered an error and could not be completed. Please review the details below and try again.</p>
+
+            <table class="details-table">
+                <tr>
+                    <th>Deployment ID</th>
+                    <td>{{deployment_id}}</td>
+                </tr>
+                <tr>
+                    <th>Resource Type</th>
+                    <td>{{resource_type}}</td>
+                </tr>
+                <tr>
+                    <th>Environment</th>
+                    <td>{{environment}}</td>
+                </tr>
+                <tr>
+                    <th>Subscription</th>
+                    <td>{{subscription}}</td>
+                </tr>
+                <tr>
+                    <th>Resource Group</th>
+                    <td>{{resource_group_name}}</td>
+                </tr>
+                <tr>
+                    <th>Region</th>
+                    <td>{{location}}</td>
+                </tr>
+                <tr>
+                    <th>Failed At</th>
+                    <td>{{failed_at}}</td>
+                </tr>
+                <tr>
+                    <th>Approved By</th>
+                    <td>{{approved_by}}</td>
+                </tr>
+            </table>
+
+            <div class="error-section">
+                <div class="error-section-title">🔍 Error Details</div>
+                <div class="error-content">{{error_message}}</div>
+            </div>
+
+            <div class="error-section">
+                <div class="error-section-title">📋 Terraform Logs</div>
+                <div class="error-content">{{terraform_logs}}</div>
+            </div>
+
+            <div class="troubleshooting">
+                <h3>🛠️ Common Issues & Solutions</h3>
+                <div class="common-issues">
+                    <div class="issue-item">
+                        <div class="issue-title">Resource Name Conflicts</div>
+                        <div class="issue-solution">Resource names must be globally unique. Try adding a random suffix or timestamp.</div>
+                    </div>
+                    <div class="issue-item">
+                        <div class="issue-title">Quota Exceeded</div>
+                        <div class="issue-solution">Check your subscription limits in the Azure Portal. Request quota increases if needed.</div>
+                    </div>
+                    <div class="issue-item">
+                        <div class="issue-title">Insufficient Permissions</div>
+                        <div class="issue-solution">Ensure the service principal has Contributor access to the target resource group/subscription.</div>
+                    </div>
+                    <div class="issue-item">
+                        <div class="issue-title">Region Capacity</div>
+                        <div class="issue-solution">The selected region may not have capacity for the requested VM size. Try a different region or VM size.</div>
+                    </div>
+                    <div class="issue-item">
+                        <div class="issue-title">Network Configuration</div>
+                        <div class="issue-solution">Check that VNET address spaces don't overlap with existing networks.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin: 20px 0;">
+                <a href="https://erdtree-portal.azurewebsites.net" class="btn btn-retry">
+                    🔄 Try Again
+                </a>
+                <a href="https://github.com/your-org/erdtree-infrastructure/actions/runs/{{workflow_run_id}}" class="btn">
+                    📋 View Full Logs
+                </a>
+                <a href="https://portal.azure.com/#@{{tenant_id}}/resource/subscriptions/{{subscription_id}}/resourceGroups" class="btn">
+                    🔗 Azure Portal
+                </a>
+            </div>
+
+            <div class="error-section">
+                <div class="error-section-title">📞 Need Help?</div>
+                <ul>
+                    <li><strong>Infrastructure Team:</strong> Contact hemirafl@microsoft.com for assistance</li>
+                    <li><strong>GitHub Issues:</strong> <a href="https://github.com/your-org/erdtree-infrastructure/issues">Report a bug or request help</a></li>
+                    <li><strong>Azure Support:</strong> Create a support ticket in the Azure Portal if this appears to be an Azure platform issue</li>
+                    <li><strong>Documentation:</strong> Review the <a href="https://github.com/your-org/erdtree-infrastructure/wiki">Erdtree Portal Wiki</a> for troubleshooting guides</li>
+                </ul>
+            </div>
+
+            <div class="troubleshooting">
+                <h3>🔧 What We've Done</h3>
+                <ul>
+                    <li>Automatically attempted to clean up any partially created resources</li>
+                    <li>Preserved the Terraform state for investigation</li>
+                    <li>Logged all error details for infrastructure team review</li>
+                    <li>No charges should be incurred for failed deployments</li>
+                </ul>
+            </div>
+
+            <div class="error-section">
+                <div class="error-section-title">📊 Deployment Context</div>
+                <div class="common-issues">
+                    <div class="issue-item">
+                        <strong>Terraform Version:</strong> {{terraform_version}}
+                    </div>
+                    <div class="issue-item">
+                        <strong>AzureRM Provider:</strong> {{azurerm_version}}
+                    </div>
+                    <div class="issue-item">
+                        <strong>Workflow Run:</strong> {{workflow_run_id}}
+                    </div>
+                    <div class="issue-item">
+                        <strong>Git Commit:</strong> {{git_commit}}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🌳 Erdtree Self-Service Portal | Deployment failed - please try again</p>
+            <p>This is an automated message. For assistance, contact the Infrastructure Team</p>
+            <p>© {{current_year}} Microsoft Corporation - Erdtree Infrastructure Team</p>
+        </div>
+    </div>
+</body>
+</html>
