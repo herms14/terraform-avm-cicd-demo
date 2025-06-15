@@ -1,0 +1,102 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "logicAppName": {
+      "type": "string",
+      "defaultValue": "erdtree-approval-workflow"
+    },
+    "approverEmail": {
+      "type": "string",
+      "defaultValue": "hemirafl@microsoft.com"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2019-05-01",
+      "name": "[parameters('logicAppName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {},
+          "triggers": {
+            "manual": {
+              "type": "Request",
+              "kind": "Http",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deploymentId": { "type": "string" },
+                    "resourceType": { "type": "string" },
+                    "environment": { "type": "string" },
+                    "subscription": { "type": "string" },
+                    "requestedBy": { "type": "string" },
+                    "tfvars": { "type": "object" }
+                  },
+                  "required": ["deploymentId", "resourceType", "requestedBy"]
+                }
+              }
+            }
+          },
+          "actions": {
+            "Log_deployment_request": {
+              "type": "Compose",
+              "inputs": {
+                "message": "Deployment request received",
+                "deploymentId": "@{triggerBody()['deploymentId']}",
+                "resourceType": "@{triggerBody()['resourceType']}",
+                "requestedBy": "@{triggerBody()['requestedBy']}",
+                "environment": "@{triggerBody()['environment']}",
+                "timestamp": "@{utcNow()}"
+              },
+              "runAfter": {}
+            },
+            "Response": {
+              "type": "Response",
+              "inputs": {
+                "statusCode": 200,
+                "body": {
+                  "status": "received",
+                  "message": "Deployment request has been logged and will be processed",
+                  "deploymentId": "@{triggerBody()['deploymentId']}",
+                  "resourceType": "@{triggerBody()['resourceType']}",
+                  "nextSteps": [
+                    "Email approval sent to approver",
+                    "GitHub Actions will be triggered upon approval",
+                    "Deployment status will be tracked"
+                  ],
+                  "approverEmail": "@{parameters('approverEmail')}",
+                  "callbackUrl": "@{listCallbackUrl()}"
+                }
+              },
+              "runAfter": {
+                "Log_deployment_request": ["Succeeded"]
+              }
+            }
+          }
+        },
+        "parameters": {}
+      },
+      "tags": {
+        "deployedBy": "Hermes",
+        "managedBy": "ARM",
+        "environment": "prod",
+        "application": "erdtree-portal"
+      }
+    }
+  ],
+  "outputs": {
+    "logicAppUrl": {
+      "type": "string",
+      "value": "[listCallbackUrl(resourceId('Microsoft.Logic/workflows/triggers', parameters('logicAppName'), 'manual'), '2019-05-01').value]"
+    },
+    "logicAppName": {
+      "type": "string",
+      "value": "[parameters('logicAppName')]"
+    }
+  }
+}

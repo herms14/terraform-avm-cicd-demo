@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erdtree Self-Service Portal</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@azure/msal-browser@3.0.0/dist/msal-browser.min.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+    <script>
+        const { useState, useEffect } = React;
+        
+        // MSAL Configuration
+        const msalConfig = {
+            auth: {
+                clientId: 'bddf94ca-ff1f-4cc9-aac9-4fd51d3af064',
+                authority: 'https://login.microsoftonline.com/b6458a9a-9661-468c-bda3-5f496727d0b0',
+                redirectUri: window.location.origin,
+            },
+            cache: {
+                cacheLocation: 'sessionStorage',
+                storeAuthStateInCookie: false,
+            },
+        };
+        
+        const msalInstance = new msal.PublicClientApplication(msalConfig);
+        
+        function App() {
+            const [user, setUser] = useState(null);
+            const [selectedResource, setSelectedResource] = useState(null);
+            const [showForm, setShowForm] = useState(false);
+            
+            const resources = [
+                { id: 'vm-windows', name: 'Windows VM', icon: '🖥️', desc: 'Deploy Windows Server VMs', category: 'compute' },
+                { id: 'vm-linux', name: 'Linux VM', icon: '🐧', desc: 'Deploy Linux VMs', category: 'compute' },
+                { id: 'storage', name: 'Storage Account', icon: '💾', desc: 'Create storage accounts', category: 'storage' },
+                { id: 'vnet', name: 'Virtual Network', icon: '🌐', desc: 'Create virtual networks', category: 'network' },
+                { id: 'webapp', name: 'Web App', icon: '🌍', desc: 'Host web applications', category: 'web' },
+                { id: 'loadbalancer', name: 'Load Balancer', icon: '⚖️', desc: 'Distribute traffic', category: 'network' }
+            ];
+            
+            useEffect(() => {
+                msalInstance.initialize().then(() => {
+                    const accounts = msalInstance.getAllAccounts();
+                    if (accounts.length > 0) {
+                        setUser(accounts[0]);
+                    }
+                });
+            }, []);
+            
+            const login = async () => {
+                try {
+                    const response = await msalInstance.loginPopup({
+                        scopes: ['User.Read']
+                    });
+                    setUser(response.account);
+                } catch (error) {
+                    console.error('Login failed:', error);
+                }
+            };
+            
+            const logout = () => {
+                msalInstance.logoutPopup();
+                setUser(null);
+            };
+            
+            const getCategoryColor = (category) => {
+                const colors = {
+                    compute: 'bg-blue-50 border-blue-200 hover:bg-blue-100',
+                    network: 'bg-green-50 border-green-200 hover:bg-green-100',
+                    storage: 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100',
+                    web: 'bg-purple-50 border-purple-200 hover:bg-purple-100'
+                };
+                return colors[category] || 'bg-gray-50 border-gray-200 hover:bg-gray-100';
+            };
+            
+            const submitDeployment = () => {
+                alert(`Deployment submitted for ${selectedResource}!\\n\\nThis would normally:\\n1. Send to Logic App for approval\\n2. Email hemirafl@microsoft.com\\n3. Deploy via GitHub Actions\\n4. Use Azure Verified Modules`);
+                setShowForm(false);
+                setSelectedResource(null);
+            };
+            
+            if (!user) {
+                return React.createElement('div', { className: 'min-h-screen flex items-center justify-center' },
+                    React.createElement('div', { className: 'max-w-md w-full space-y-8' },
+                        React.createElement('div', { className: 'text-center' },
+                            React.createElement('h1', { className: 'text-3xl font-bold text-gray-900 mb-4' }, 
+                                '🌳 Erdtree Self-Service Portal'
+                            ),
+                            React.createElement('p', { className: 'text-gray-600 mb-8' }, 
+                                'Deploy Azure infrastructure with approval workflow'
+                            ),
+                            React.createElement('button', {
+                                onClick: login,
+                                className: 'w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700'
+                            }, 'Sign in with Microsoft')
+                        )
+                    )
+                );
+            }
+            
+            return React.createElement('div', { className: 'min-h-screen' },
+                // Header
+                React.createElement('div', { className: 'bg-white shadow' },
+                    React.createElement('div', { className: 'max-w-7xl mx-auto px-4 py-6 flex justify-between items-center' },
+                        React.createElement('h1', { className: 'text-3xl font-bold text-gray-900' }, 
+                            '🌳 Erdtree Self-Service Portal'
+                        ),
+                        React.createElement('div', { className: 'flex items-center space-x-4' },
+                            React.createElement('span', { className: 'text-sm text-gray-600' }, user.name),
+                            React.createElement('button', {
+                                onClick: logout,
+                                className: 'text-sm text-blue-600 hover:text-blue-800'
+                            }, 'Sign out')
+                        )
+                    )
+                ),
+                
+                // Main Content
+                React.createElement('div', { className: 'max-w-7xl mx-auto px-4 py-8' },
+                    React.createElement('div', { className: 'mb-8' },
+                        React.createElement('h2', { className: 'text-2xl font-bold text-gray-900 mb-2' }, 
+                            'Deploy Azure Infrastructure'
+                        ),
+                        React.createElement('p', { className: 'text-gray-600' }, 
+                            'Select a resource type to deploy using Azure Verified Modules and Terraform'
+                        )
+                    ),
+                    
+                    // Resource Cards
+                    React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' },
+                        resources.map(resource => 
+                            React.createElement('div', {
+                                key: resource.id,
+                                className: `p-6 rounded-lg border-2 cursor-pointer transition-all ${getCategoryColor(resource.category)}`,
+                                onClick: () => {
+                                    setSelectedResource(resource.name);
+                                    setShowForm(true);
+                                }
+                            },
+                                React.createElement('div', { className: 'flex items-center space-x-4' },
+                                    React.createElement('div', { className: 'text-4xl' }, resource.icon),
+                                    React.createElement('div', null,
+                                        React.createElement('h3', { className: 'text-lg font-semibold text-gray-900 mb-2' }, resource.name),
+                                        React.createElement('p', { className: 'text-sm text-gray-600' }, resource.desc)
+                                    )
+                                )
+                            )
+                        )
+                    ),
+                    
+                    // Status Info
+                    React.createElement('div', { className: 'mt-12 bg-blue-50 border border-blue-200 rounded-lg p-6' },
+                        React.createElement('h3', { className: 'font-semibold text-blue-900 mb-4' }, '🚀 Deployment Status'),
+                        React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4 text-sm' },
+                            React.createElement('div', null,
+                                React.createElement('div', { className: 'flex items-center mb-2' },
+                                    React.createElement('span', { className: 'text-green-500 mr-2' }, '✅'),
+                                    React.createElement('span', null, 'Azure CLI: Working')
+                                ),
+                                React.createElement('div', { className: 'flex items-center mb-2' },
+                                    React.createElement('span', { className: 'text-green-500 mr-2' }, '✅'),
+                                    React.createElement('span', null, 'Azure AD: Configured')
+                                ),
+                                React.createElement('div', { className: 'flex items-center mb-2' },
+                                    React.createElement('span', { className: 'text-green-500 mr-2' }, '✅'),
+                                    React.createElement('span', null, 'Web App: Deployed')
+                                )
+                            ),
+                            React.createElement('div', null,
+                                React.createElement('div', { className: 'flex items-center mb-2' },
+                                    React.createElement('span', { className: 'text-green-500 mr-2' }, '✅'),
+                                    React.createElement('span', null, 'Application Insights: Ready')
+                                ),
+                                React.createElement('div', { className: 'flex items-center mb-2' },
+                                    React.createElement('span', { className: 'text-yellow-500 mr-2' }, '⚠️'),
+                                    React.createElement('span', null, 'Logic App: Manual config needed')
+                                ),
+                                React.createElement('div', { className: 'flex items-center mb-2' },
+                                    React.createElement('span', { className: 'text-green-500 mr-2' }, '✅'),
+                                    React.createElement('span', null, 'Frontend: Deployed')
+                                )
+                            )
+                        )
+                    )
+                ),
+                
+                // Modal
+                showForm && React.createElement('div', { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center' },
+                    React.createElement('div', { className: 'bg-white rounded-lg shadow-xl max-w-md w-full m-4 p-6' },
+                        React.createElement('h3', { className: 'text-xl font-semibold mb-4' }, 
+                            `Deploy ${selectedResource}`
+                        ),
+                        React.createElement('p', { className: 'text-gray-600 mb-6' }, 
+                            'This deployment will use Azure Verified Modules and require approval from hemirafl@microsoft.com'
+                        ),
+                        React.createElement('div', { className: 'mb-4' },
+                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Environment'),
+                            React.createElement('select', { className: 'w-full px-3 py-2 border border-gray-300 rounded-md' },
+                                React.createElement('option', { value: 'dev' }, 'Development'),
+                                React.createElement('option', { value: 'prod' }, 'Production')
+                            )
+                        ),
+                        React.createElement('div', { className: 'mb-6' },
+                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Subscription'),
+                            React.createElement('select', { className: 'w-full px-3 py-2 border border-gray-300 rounded-md' },
+                                React.createElement('option', { value: 'FireGiants-Prod' }, 'FireGiants-Prod'),
+                                React.createElement('option', { value: 'Nokron-Prod', selected: true }, 'Nokron-Prod')
+                            )
+                        ),
+                        React.createElement('div', { className: 'flex space-x-4' },
+                            React.createElement('button', {
+                                onClick: () => setShowForm(false),
+                                className: 'flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50'
+                            }, 'Cancel'),
+                            React.createElement('button', {
+                                onClick: submitDeployment,
+                                className: 'flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700'
+                            }, 'Submit for Approval')
+                        )
+                    )
+                )
+            );
+        }
+        
+        ReactDOM.render(React.createElement(App), document.getElementById('root'));
+    </script>
+</body>
+</html>

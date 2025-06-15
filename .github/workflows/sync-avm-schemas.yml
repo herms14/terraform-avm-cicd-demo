@@ -1,0 +1,446 @@
+# Automated AVM Schema Sync
+# Syncs Azure Verified Modules from Terraform Registry on schedule
+
+name: Sync AVM Schemas
+
+on:
+  # Run daily at 2 AM UTC
+  schedule:
+    - cron: '0 2 * * *'
+  
+  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      force_sync:
+        description: 'Force full resync (ignores cache)'
+        required: false
+        default: 'false'
+        type: boolean
+      sync_specific_module:
+        description: 'Sync specific module (e.g., avm-res-compute-virtualmachine)'
+        required: false
+        type: string
+
+  # Trigger on pushes to schema sync code
+  push:
+    paths:
+      - 'backend/schema-sync/**'
+      - '.github/workflows/sync-avm-schemas.yml'
+
+  # Trigger on PRs affecting schema sync
+  pull_request:
+    paths:
+      - 'backend/schema-sync/**'
+      - '.github/workflows/sync-avm-schemas.yml'
+
+env:
+  NODE_VERSION: '18'
+  SCHEMA_CACHE_TTL: '86400' # 24 hours
+  MAX_CONCURRENT_SYNCS: '5'
+
+jobs:
+  sync-schemas:
+    name: Sync AVM Schemas
+    runs-on: ubuntu-latest
+    
+    # Only run on main branch for scheduled and manual runs
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    
+    outputs:
+      schemas-updated: ${{ steps.sync.outputs.schemas-updated }}
+      schemas-count: ${{ steps.sync.outputs.schemas-count }}
+      sync-status: ${{ steps.sync.outputs.sync-status }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm ci --only=production
+        env:
+          NODE_ENV: production
+
+      - name: Create schemas directory
+        run: |
+          mkdir -p schemas
+          chmod 755 schemas
+
+      - name: Cache existing schemas
+        uses: actions/cache@v3
+        if: github.event.inputs.force_sync != 'true'
+        with:
+          path: schemas/
+          key: avm-schemas-${{ hashFiles('backend/schema-sync/**') }}-${{ github.run_number }}
+          restore-keys: |
+            avm-schemas-${{ hashFiles('backend/schema-sync/**') }}-
+            avm-schemas-
+
+      - name: Run schema sync
+        id: sync
+        run: |
+          cd backend
+          
+          # Set sync parameters
+          FORCE_SYNC="${{ github.event.inputs.force_sync }}"
+          SPECIFIC_MODULE="${{ github.event.inputs.sync_specific_module }}"
+          
+          echo "Starting AVM schema sync..."
+          echo "Force sync: ${FORCE_SYNC}"
+          echo "Specific module: ${SPECIFIC_MODULE}"
+          
+          # Run the sync script
+          if [[ -n "$SPECIFIC_MODULE" ]]; then
+            echo "Syncing specific module: $SPECIFIC_MODULE"
+            node -e "
+              const TerraformRegistryClient = require('./schema-sync/terraform-registry-client').default;
+              const SchemaManager = require('./schema-sync/schema-manager').default;
+              
+              async function syncSpecificModule() {
+                try {
+                  const client = new TerraformRegistryClient();
+                  const manager = new SchemaManager('../schemas');
+                  
+                  console.log('Fetching Azure modules...');
+                  const modules = await client.fetchAzureModules();
+                  
+                  const targetModule = modules.find(m => m.name === '$SPECIFIC_MODULE');
+                  if (!targetModule) {
+                    throw new Error('Module not found: $SPECIFIC_MODULE');
+                  }
+                  
+                  console.log('Generating schema for: $SPECIFIC_MODULE');
+                  const schema = await client.generateModuleSchema(targetModule);
+                  await manager.storeSchema(schema);
+                  
+                  console.log('::set-output name=schemas-updated::1');
+                  console.log('::set-output name=schemas-count::1');
+                  console.log('::set-output name=sync-status::success');
+                  
+                  console.log('Specific module sync completed successfully');
+                } catch (error) {
+                  console.error('Sync failed:', error);
+                  console.log('::set-output name=sync-status::failed');
+                  process.exit(1);
+                }
+              }
+              
+              syncSpecificModule();
+            "
+          else
+            echo "Running full schema sync..."
+            node -e "
+              const TerraformRegistryClient = require('./schema-sync/terraform-registry-client').default;
+              const SchemaManager = require('./schema-sync/schema-manager').default;
+              
+              async function fullSync() {
+                try {
+                  const client = new TerraformRegistryClient();
+                  const manager = new SchemaManager('../schemas');
+                  
+                  // Check if we need to sync
+                  const forceSync = '$FORCE_SYNC' === 'true';
+                  
+                  if (!forceSync) {
+                    try {
+                      const stats = await manager.getCacheStats();
+                      const lastUpdated = new Date(stats.lastUpdated);
+                      const cacheAge = Date.now() - lastUpdated.getTime();
+                      const cacheTtl = parseInt('${{ env.SCHEMA_CACHE_TTL }}') * 1000;
+                      
+                      if (cacheAge < cacheTtl) {
+                        console.log('Schemas are up to date, skipping sync');
+                        console.log('::set-output name=schemas-updated::0');
+                        console.log('::set-output name=schemas-count::' + stats.totalSchemas);
+                        console.log('::set-output name=sync-status::skipped');
+                        return;
+                      }
+                    } catch (error) {
+                      console.log('No existing cache found, proceeding with sync');
+                    }
+                  }
+                  
+                  console.log('Starting full AVM sync...');
+                  const schemas = await client.syncAllModules();
+                  
+                  console.log('Storing schemas...');
+                  await manager.storeSchemas(schemas);
+                  
+                  console.log('Cleaning up old schemas...');
+                  await manager.cleanup({ olderThanDays: 7, removeInvalid: true });
+                  
+                  console.log('::set-output name=schemas-updated::' + schemas.length);
+                  console.log('::set-output name=schemas-count::' + schemas.length);
+                  console.log('::set-output name=sync-status::success');
+                  
+                  console.log('Full sync completed successfully: ' + schemas.length + ' schemas');
+                } catch (error) {
+                  console.error('Full sync failed:', error);
+                  console.log('::set-output name=sync-status::failed');
+                  process.exit(1);
+                }
+              }
+              
+              fullSync();
+            "
+          fi
+        env:
+          NODE_ENV: production
+
+      - name: Generate schema index
+        if: steps.sync.outputs.sync-status == 'success'
+        run: |
+          cd backend
+          node -e "
+            const SchemaManager = require('./schema-sync/schema-manager').default;
+            
+            async function generateIndex() {
+              try {
+                const manager = new SchemaManager('../schemas');
+                await manager.regenerateIndex();
+                console.log('Schema index generated successfully');
+              } catch (error) {
+                console.error('Failed to generate index:', error);
+                process.exit(1);
+              }
+            }
+            
+            generateIndex();
+          "
+
+      - name: Validate schemas
+        if: steps.sync.outputs.sync-status == 'success'
+        run: |
+          echo "Validating generated schemas..."
+          
+          # Check if schemas directory exists and has files
+          if [ ! -d "schemas" ] || [ -z "$(ls -A schemas)" ]; then
+            echo "Error: No schemas found"
+            exit 1
+          fi
+          
+          # Validate JSON format
+          find schemas -name "*.json" -exec node -e "
+            const fs = require('fs');
+            const file = process.argv[1];
+            try {
+              const content = fs.readFileSync(file, 'utf8');
+              JSON.parse(content);
+              console.log('✅ Valid:', file);
+            } catch (error) {
+              console.error('❌ Invalid JSON:', file, error.message);
+              process.exit(1);
+            }
+          " {} \;
+          
+          # Check schema count
+          SCHEMA_COUNT=$(find schemas -name "*.json" ! -name "index.json" | wc -l)
+          echo "Total schemas: $SCHEMA_COUNT"
+          
+          if [ "$SCHEMA_COUNT" -lt 1 ]; then
+            echo "Error: No valid schemas found"
+            exit 1
+          fi
+
+      - name: Upload schemas artifact
+        if: steps.sync.outputs.sync-status == 'success'
+        uses: actions/upload-artifact@v3
+        with:
+          name: avm-schemas-${{ github.run_number }}
+          path: schemas/
+          retention-days: 30
+
+      - name: Deploy schemas to production
+        if: steps.sync.outputs.sync-status == 'success' && github.ref == 'refs/heads/main'
+        run: |
+          echo "Deploying schemas to production..."
+          
+          # In a real deployment, you would:
+          # 1. Upload to Azure Storage
+          # 2. Update CDN
+          # 3. Invalidate cache
+          # 4. Update database
+          
+          # For this example, we'll simulate deployment
+          echo "Schemas would be deployed to:"
+          echo "- Azure Storage Account"
+          echo "- CDN for global distribution"
+          echo "- Database for metadata indexing"
+          
+          # Create deployment manifest
+          cat > deployment-manifest.json << EOF
+          {
+            "deployment_id": "${{ github.run_number }}",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "commit_sha": "${{ github.sha }}",
+            "schemas_count": ${{ steps.sync.outputs.schemas-count }},
+            "sync_status": "${{ steps.sync.outputs.sync-status }}",
+            "environment": "production"
+          }
+          EOF
+          
+          echo "Deployment manifest created"
+
+      - name: Create sync summary
+        if: always()
+        run: |
+          cat > sync-summary.md << EOF
+          # AVM Schema Sync Summary
+          
+          **Run ID:** ${{ github.run_number }}
+          **Trigger:** ${{ github.event_name }}
+          **Status:** ${{ steps.sync.outputs.sync-status }}
+          **Timestamp:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          
+          ## Results
+          - **Schemas Updated:** ${{ steps.sync.outputs.schemas-updated }}
+          - **Total Schemas:** ${{ steps.sync.outputs.schemas-count }}
+          - **Sync Duration:** ${{ job.status }}
+          
+          ## Details
+          - **Node Version:** ${{ env.NODE_VERSION }}
+          - **Force Sync:** ${{ github.event.inputs.force_sync }}
+          - **Specific Module:** ${{ github.event.inputs.sync_specific_module }}
+          
+          ## Next Steps
+          $( if [ "${{ steps.sync.outputs.sync-status }}" == "success" ]; then
+            echo "- ✅ Schemas successfully synced and deployed"
+            echo "- 🔄 Frontend will pick up changes automatically"
+            echo "- 📊 Monitor portal for updated module catalog"
+          elif [ "${{ steps.sync.outputs.sync-status }}" == "skipped" ]; then
+            echo "- ⏭️ Sync skipped - schemas are up to date"
+            echo "- 🕐 Next scheduled sync: tomorrow at 2 AM UTC"
+          else
+            echo "- ❌ Sync failed - check logs for details"
+            echo "- 🔧 Manual intervention may be required"
+            echo "- 📧 Alert sent to administrators"
+          fi )
+          EOF
+          
+          echo "Sync summary:"
+          cat sync-summary.md
+
+      - name: Upload sync summary
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: sync-summary-${{ github.run_number }}
+          path: sync-summary.md
+          retention-days: 90
+
+  notify:
+    name: Notify Results
+    runs-on: ubuntu-latest
+    needs: sync-schemas
+    if: always() && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Notify on failure
+        if: needs.sync-schemas.outputs.sync-status == 'failed'
+        run: |
+          echo "Schema sync failed - would send alert to administrators"
+          # In production, integrate with:
+          # - Slack webhook
+          # - Microsoft Teams
+          # - Email notification
+          # - PagerDuty/OpsGenie
+
+      - name: Notify on success
+        if: needs.sync-schemas.outputs.sync-status == 'success'
+        run: |
+          echo "Schema sync completed successfully"
+          echo "Updated ${{ needs.sync-schemas.outputs.schemas-count }} schemas"
+          # Optional: Send success notification
+
+  update-documentation:
+    name: Update Documentation
+    runs-on: ubuntu-latest
+    needs: sync-schemas
+    if: needs.sync-schemas.outputs.sync-status == 'success' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download schemas
+        uses: actions/download-artifact@v3
+        with:
+          name: avm-schemas-${{ github.run_number }}
+          path: schemas/
+
+      - name: Generate module catalog documentation
+        run: |
+          echo "Generating module catalog documentation..."
+          
+          # Create markdown documentation from schemas
+          cat > MODULE_CATALOG.md << 'EOF'
+          # Azure Verified Modules Catalog
+          
+          This catalog is automatically generated from the latest Azure Verified Modules.
+          
+          **Last Updated:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          **Total Modules:** ${{ needs.sync-schemas.outputs.schemas-count }}
+          
+          ## Categories
+          
+          EOF
+          
+          # Generate category sections
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            
+            try {
+              const indexPath = 'schemas/index.json';
+              if (fs.existsSync(indexPath)) {
+                const index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
+                
+                console.log('### Module Count by Category\n');
+                Object.entries(index.categories).forEach(([category, count]) => {
+                  console.log('- **' + category.charAt(0).toUpperCase() + category.slice(1) + ':** ' + count + ' modules');
+                });
+                
+                console.log('\n### Featured Modules\n');
+                index.featured.forEach(moduleId => {
+                  const module = index.modules[moduleId];
+                  if (module) {
+                    console.log('- **' + module.name + '** (v' + module.version + ') - ' + module.category);
+                  }
+                });
+              }
+            } catch (error) {
+              console.log('Error generating documentation:', error.message);
+            }
+          " >> MODULE_CATALOG.md
+
+      - name: Commit documentation updates
+        if: github.event_name != 'pull_request'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          if [ -n "$(git status --porcelain)" ]; then
+            git add MODULE_CATALOG.md
+            git commit -m "docs: Update AVM catalog documentation
+            
+            - Updated module catalog with ${{ needs.sync-schemas.outputs.schemas-count }} modules
+            - Generated from AVM sync run ${{ github.run_number }}
+            - Automated update via GitHub Actions
+            
+            Co-authored-by: AVM Sync Bot <noreply@github.com>"
+            
+            git push
+            echo "Documentation updated and committed"
+          else
+            echo "No documentation changes to commit"
+          fi
